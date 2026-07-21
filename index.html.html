@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Dashboard Eksekutif - Google Sheets</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#030712',
+                            900: '#0B132B',
+                            800: '#1C2541',
+                            700: '#2A3459',
+                            600: '#3A4776'
+                        },
+                        gold: {
+                            300: '#FDE047',
+                            400: '#FACC15',
+                            500: '#EAB308',
+                            600: '#D4AF37',
+                            700: '#B38728',
+                            800: '#8C671E'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- PapaParse CSV Parser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #060B19;
+            color: #F8FAFC;
+        }
+
+        /* Gold metallic text effect */
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #FFF099 0%, #F1C40F 40%, #D4AF37 70%, #AA771C 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Gold metallic border glow */
+        .gold-border-glow {
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.08);
+        }
+
+        .gold-border-glow:hover {
+            border-color: rgba(212, 175, 55, 0.7);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B132B;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4AF37;
+            border-radius: 4px;
+        }
+
+        /* Print formatting optimized for PDF export */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            .print-card {
+                background-color: #ffffff !important;
+                border: 1px solid #d1d5db !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+            }
+            .print-text-dark {
+                color: #0f172a !important;
+                -webkit-text-fill-color: #0f172a !important;
+            }
+            .print-header {
+                border-bottom: 2px solid #d4af37 !important;
+                padding-bottom: 12px !important;
+                margin-bottom: 20px !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                border: 1px solid #e5e7eb !important;
+                color: #1f2937 !important;
+            }
+            th {
+                background-color: #f3f4f6 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#060B19] text-slate-100 flex flex-col">
+
+    <header class="bg-navy-900 border-b border-gold-600/30 sticky top-0 z-40 shadow-xl backdrop-blur-md bg-opacity-95">
+        <!-- Gold Accent Line -->
+        <div class="h-1 bg-gradient-to-r from-gold-700 via-gold-400 to-gold-700"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                
+                <!-- Branding Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-gold-500 to-gold-800 flex items-center justify-center text-navy-950 font-bold text-xl shadow-lg shadow-gold-600/20">
+                        <i class="fa-solid font-bold fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold font-serif gold-gradient-text tracking-tight print-text-dark">
+                            Laporan Dashboard Eksekutif
+                        </h1>
+                        <p class="text-xs text-slate-400 flex items-center gap-2">
+                            <span><i class="fa-solid fa-sync text-gold-500 text-[10px]"></i> Segerak Langsung Google Sheets</span>
+                            <span class="text-slate-600">•</span>
+                            <span id="lastUpdatedTime">Kemaskini: Memuatkan...</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Live Sync Status & Action Controls -->
+                <div class="flex flex-wrap items-center gap-3 no-print">
+                    
+                    <!-- Live Sync Indicator Badge -->
+                    <div class="bg-navy-800/80 border border-gold-600/30 rounded-lg px-3 py-1.5 flex items-center space-x-2 text-xs">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <span class="text-slate-300 font-medium">Auto-Sync: <span id="syncCountdown" class="text-gold-400 font-semibold">60s</span></span>
+                    </div>
+
+                    <!-- Refresh Button -->
+                    <button id="refreshBtn" onclick="fetchLiveData()" class="bg-navy-800 hover:bg-navy-700 text-gold-400 hover:text-gold-300 border border-gold-600/40 font-medium text-xs px-3.5 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 active:scale-95 shadow-md">
+                        <i class="fa-solid fa-rotate text-sm" id="refreshIcon"></i>
+                        <span>Muat Semula Data</span>
+                    </button>
+
+                    <!-- Print / PDF Button -->
+                    <button onclick="window.print()" class="bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-navy-950 font-bold text-xs px-4 py-2 rounded-lg flex items-center space-x-2 transition-all duration-200 shadow-lg shadow-gold-500/20 active:scale-95">
+                        <i class="fa-solid fa-file-pdf text-sm"></i>
+                        <span>Cetak / Simpan PDF</span>
+                    </button>
+
+                    <!-- Settings Modal Toggle -->
+                    <button onclick="toggleSettingsModal()" class="bg-navy-800 hover:bg-navy-700 text-slate-300 border border-slate-700 text-xs p-2 rounded-lg transition-all shadow-md" title="Tetapan Pautan Data">
+                        <i class="fa-solid fa-gear text-sm"></i>
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Status / Error Alert Banner -->
+        <div id="statusBanner" class="hidden no-print transition-all duration-300">
+            <div id="statusBannerInner" class="p-4 rounded-xl flex items-center justify-between border">
+                <div class="flex items-center space-x-3">
+                    <i id="statusBannerIcon" class="fa-solid fa-circle-info text-lg"></i>
+                    <span id="statusBannerText" class="text-sm font-medium">--</span>
+                </div>
+                <button onclick="hideStatusBanner()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Print Executive Header Banner (Visible only on print/PDF) -->
+        <div class="hidden print:block print-header">
+            <h1 class="text-2xl font-bold text-slate-900">LAPORAN DOKUMEN EKSEKUTIF DATA</h1>
+            <p class="text-xs text-slate-600">Dicetak pada: <span id="printDate"></span> | Sumber Data: Google Sheets Auto-Sync</p>
+            <div id="printFilterSummary" class="mt-2 text-xs text-amber-800 font-medium"></div>
+        </div>
+
+        <!-- Interactive Filter & Control Panel -->
+        <section class="bg-navy-900/90 rounded-2xl p-5 gold-border-glow shadow-xl no-print">
+            <div class="flex flex-col space-y-4">
+                
+                <!-- Filter Section Title -->
+                <div class="flex items-center justify-between border-b border-navy-700/60 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-filter text-gold-400 text-sm"></i>
+                        <h2 class="text-sm font-bold tracking-wider text-slate-200 uppercase">Panel Tapisan Data (Filters)</h2>
+                        <span id="recordBadge" class="bg-gold-500/10 text-gold-400 border border-gold-500/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full">
+                            Memuatkan rekod...
+                        </span>
+                    </div>
+                    <button onclick="resetAllFilters()" class="text-xs text-gold-400 hover:text-gold-300 hover:underline flex items-center space-x-1">
+                        <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                        <span>Set Semula Tapisan</span>
+                    </button>
+                </div>
+
+                <!-- Primary Preset Category Filter Buttons (Dynamic) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Tapisan Pantas Kategori / Status:</label>
+                    <div id="quickFilterContainer" class="flex flex-wrap gap-2">
+                        <!-- Dynamic buttons injected via JS -->
+                        <div class="text-xs text-slate-500 italic py-1">Memuatkan butang tapisan...</div>
+                    </div>
+                </div>
+
+                <!-- Column-Specific Dropdown Filters & Search Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                    
+                    <!-- Global Text Search Box -->
+                    <div class="relative">
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Carian Teks / Perkataan</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Cari dalam rekod..." class="w-full bg-navy-950 border border-slate-700/80 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-gold-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Dropdown 1 -->
+                    <div id="dropdownWrapper1" class="hidden">
+                        <label id="dropdownLabel1" class="block text-[11px] font-medium text-slate-400 mb-1">Filter 1</label>
+                        <select id="dropdownFilter1" onchange="applyFilters()" class="w-full bg-navy-950 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-gold-500 transition-colors">
+                            <option value="">Semua Data</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Dropdown 2 -->
+                    <div id="dropdownWrapper2" class="hidden">
+                        <label id="dropdownLabel2" class="block text-[11px] font-medium text-slate-400 mb-1">Filter 2</label>
+                        <select id="dropdownFilter2" onchange="applyFilters()" class="w-full bg-navy-950 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-gold-500 transition-colors">
+                            <option value="">Semua Data</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Numeric Column Selector for KPI Calculation -->
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-400 mb-1">Lajur Nilai Utama (Metrics)</label>
+                        <select id="metricColumnSelect" onchange="onMetricColumnChange()" class="w-full bg-navy-950 border border-gold-600/30 rounded-lg px-3 py-1.5 text-xs text-gold-400 font-medium focus:outline-none focus:border-gold-500 transition-colors">
+                            <option value="">Mengesan lajur nombor...</option>
+                        </select>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- KPI Metrics Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- KPI Card 1: Total Sum -->
+            <div class="bg-navy-900/90 rounded-xl p-5 border border-gold-600/30 shadow-lg relative overflow-hidden group print-card">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-gold-500/5 rounded-full blur-xl group-hover:bg-gold-500/10 transition-all"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider print-text-dark">Jumlah Keseluruhan</span>
+                    <div class="w-8 h-8 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 text-sm">
+                        <i class="fa-solid fa-calculator"></i>
+                    </div>
+                </div>
+                <div id="kpiTotalSum" class="text-2xl font-bold font-serif gold-gradient-text tracking-tight print-text-dark">
+                    0.00
+                </div>
+                <p id="kpiTotalSumSub" class="text-[11px] text-slate-500 mt-1">Berdasarkan data terpilih</p>
+            </div>
+
+            <!-- KPI Card 2: Average Value -->
+            <div class="bg-navy-900/90 rounded-xl p-5 border border-gold-600/30 shadow-lg relative overflow-hidden group print-card">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-gold-500/5 rounded-full blur-xl group-hover:bg-gold-500/10 transition-all"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider print-text-dark">Purata Nilai</span>
+                    <div class="w-8 h-8 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 text-sm">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                </div>
+                <div id="kpiAverage" class="text-2xl font-bold font-serif gold-gradient-text tracking-tight print-text-dark">
+                    0.00
+                </div>
+                <p id="kpiAverageSub" class="text-[11px] text-slate-500 mt-1">Purata per baris rekod</p>
+            </div>
+
+            <!-- KPI Card 3: Total Records Count -->
+            <div class="bg-navy-900/90 rounded-xl p-5 border border-gold-600/30 shadow-lg relative overflow-hidden group print-card">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-gold-500/5 rounded-full blur-xl group-hover:bg-gold-500/10 transition-all"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider print-text-dark">Jumlah Rekod</span>
+                    <div class="w-8 h-8 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 text-sm">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                </div>
+                <div id="kpiRecordCount" class="text-2xl font-bold font-serif gold-gradient-text tracking-tight print-text-dark">
+                    0
+                </div>
+                <p id="kpiRecordCountSub" class="text-[11px] text-slate-500 mt-1">Baris data ditapis</p>
+            </div>
+
+            <!-- KPI Card 4: Min / Max Value -->
+            <div class="bg-navy-900/90 rounded-xl p-5 border border-gold-600/30 shadow-lg relative overflow-hidden group print-card">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-gold-500/5 rounded-full blur-xl group-hover:bg-gold-500/10 transition-all"></div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider print-text-dark">Nilai Maksimum</span>
+                    <div class="w-8 h-8 rounded-lg bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-400 text-sm">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+                </div>
+                <div id="kpiMaxVal" class="text-2xl font-bold font-serif gold-gradient-text tracking-tight print-text-dark">
+                    0.00
+                </div>
+                <p id="kpiMinVal" class="text-[11px] text-slate-500 mt-1">Nilai Min: 0.00</p>
+            </div>
+
+        </section>
+
+        <!-- Visual Data Charts Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Chart Card 1: Primary Bar Breakdown -->
+            <div class="bg-navy-900/90 rounded-2xl p-5 gold-border-glow shadow-xl print-card">
+                <div class="flex items-center justify-between border-b border-navy-700/60 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-column text-gold-400 text-sm"></i>
+                        <h3 id="chart1Title" class="text-sm font-bold text-slate-200 uppercase tracking-wider print-text-dark">Agihan Nilai mengikut Kategori</h3>
+                    </div>
+                    <span class="text-[10px] bg-navy-800 text-gold-400 px-2 py-0.5 rounded border border-gold-600/20 no-print">Carta Bar</span>
+                </div>
+                <div class="relative h-64 w-full">
+                    <canvas id="primaryBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart Card 2: Distribution / Doughnut Chart -->
+            <div class="bg-navy-900/90 rounded-2xl p-5 gold-border-glow shadow-xl print-card">
+                <div class="flex items-center justify-between border-b border-navy-700/60 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-pie text-gold-400 text-sm"></i>
+                        <h3 id="chart2Title" class="text-sm font-bold text-slate-200 uppercase tracking-wider print-text-dark">Pecahan Peratusan Data</h3>
+                    </div>
+                    <span class="text-[10px] bg-navy-800 text-gold-400 px-2 py-0.5 rounded border border-gold-600/20 no-print">Carta Donut</span>
+                </div>
+                <div class="relative h-64 w-full flex items-center justify-center">
+                    <canvas id="secondaryDoughnutChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Interactive Detailed Data Table -->
+        <section class="bg-navy-900/90 rounded-2xl gold-border-glow shadow-xl overflow-hidden print-card">
+            
+            <div class="p-5 border-b border-navy-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-table-cells text-gold-400 text-sm"></i>
+                    <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider print-text-dark">Jadual Rekod Terperinci (Data Asal)</h3>
+                </div>
+                <div class="flex items-center space-x-3 text-xs no-print">
+                    <span class="text-slate-400">Paparan Setiap Halaman:</span>
+                    <select id="pageSizeSelect" onchange="changePageSize()" class="bg-navy-950 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-gold-500">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">Semua</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table Wrapper -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-navy-950 text-gold-400 uppercase font-semibold border-b border-navy-800 tracking-wider">
+                        <tr id="tableHeaderRow">
+                            <th class="px-4 py-3">Memuatkan lajur...</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-navy-800/60">
+                        <tr>
+                            <td class="px-4 py-8 text-center text-slate-500 italic">
+                                <i class="fa-solid fa-circle-notch fa-spin text-gold-400 text-xl mb-2 block"></i>
+                                Memuatkan data dari Google Sheets...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Pagination Footer -->
+            <div class="p-4 border-t border-navy-800/80 bg-navy-950/50 flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
+                <div id="tableInfoText" class="text-xs text-slate-400">
+                    Menunjukkan 0 hingga 0 daripada 0 rekod
+                </div>
+                <div class="flex items-center space-x-2" id="paginationControls">
+                    <!-- Dynamic pagination buttons -->
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-navy-950 border-t border-navy-800 mt-10 py-6 no-print">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+            <p>© 2026 Laporan Eksekutif Automatik • Terhubung ke Google Sheets CSV Live Output</p>
+            <p class="text-[11px] text-slate-600">Sistem ini memaparkan nombor dan data asal dari pautan fail tanpa melakukan sebarang pengubahan nilai.</p>
+        </div>
+    </footer>
+
+    <!-- Settings Modal Window -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-navy-900 border border-gold-600/40 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="toggleSettingsModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-lg bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-400">
+                    <i class="fa-solid fa-link text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-100">Tetapan Pautan Google Sheet</h3>
+                    <p class="text-xs text-slate-400">Kemaskini pautan CSV Google Sheets jika perlu</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Pautan CSV Google Sheet Terbitan (Published CSV URL):</label>
+                    <input type="text" id="csvUrlInput" class="w-full bg-navy-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+                </div>
+                <div class="bg-navy-950 p-3 rounded-lg border border-slate-800 text-slate-400 text-[11px] space-y-1">
+                    <p class="font-semibold text-gold-400"><i class="fa-solid fa-circle-info"></i> Nota Google Sheet:</p>
+                    <p>Pastikan fail di Google Sheets diterbitkan melalui: <b>File → Share → Publish to web → CSV</b>.</p>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button onclick="toggleSettingsModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300">Batal</button>
+                    <button onclick="saveCustomCsvUrl()" class="px-4 py-2 bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-navy-950 font-bold rounded-lg shadow-md">Simpan & Muat Semula</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default Google Sheets CSV URL provided by user
+        const DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQSKia_NKan3wIvzXoJuIE3AV6YbhApMWkQFqAkXfz3s_PckFCjYi8I6UZ8Zl1c9ICib3I2cB0snSki/pub?output=csv";
+        
+        // Application Global States
+        let currentCsvUrl = localStorage.getItem("custom_csv_url") || DEFAULT_CSV_URL;
+        let rawData = [];
+        let filteredData = [];
+        let headers = [];
+        let numericColumns = [];
+        let categoricalColumns = [];
+        let selectedMetricColumn = "";
+        let primaryCategoryColumn = "";
+        
+        // Filter States
+        let activeQuickFilter = "ALL";
+        let dropdownFilter1Val = "";
+        let dropdownFilter2Val = "";
+        let searchQuery = "";
+
+        // Pagination State
+        let currentPage = 1;
+        let pageSize = 25;
+
+        // Chart Instances
+        let barChartInstance = null;
+        let doughnutChartInstance = null;
+
+        // Auto Refresh Timer State
+        let autoSyncTimer = null;
+        let countdownSeconds = 60;
+
+        // Initialize Application
+        window.onload = function() {
+            document.getElementById("csvUrlInput").value = currentCsvUrl;
+            document.getElementById("printDate").innerText = new Date().toLocaleString('ms-MY');
+            
+            // Initial data fetch
+            fetchLiveData();
+
+            // Start 60-second auto refresh loop
+            startAutoSyncTimer();
+        };
+
+        async function fetchLiveData() {
+            const refreshIcon = document.getElementById("refreshIcon");
+            if(refreshIcon) refreshIcon.classList.add("fa-spin");
+
+            showStatusBanner("Memuat turun data terkini dari Google Sheets...", "info");
+
+            try {
+                // Append timestamp to prevent browser caching
+                const cacheBusterUrl = currentCsvUrl + (currentCsvUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+                
+                const response = await fetch(cacheBusterUrl, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error(`Gagal memuat turun CSV. Status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                
+                // Parse CSV using PapaParse
+                Papa.parse(csvText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    dynamicTyping: false, // Keep raw strings to preserve exact numbers
+                    complete: function(results) {
+                        if (results.data && results.data.length > 0) {
+                            processParsedData(results.data, results.meta.fields);
+                            showStatusBanner("Data berjaya dikemaskini dari Google Sheets!", "success");
+                            document.getElementById("lastUpdatedTime").innerText = "Kemaskini: " + new Date().toLocaleTimeString('ms-MY');
+                        } else {
+                            showStatusBanner("Amaran: Fail CSV tiada rekod data.", "warning");
+                        }
+                        if(refreshIcon) refreshIcon.classList.remove("fa-spin");
+                    },
+                    error: function(err) {
+                        showStatusBanner("Ralat semasa membaca data CSV: " + err.message, "error");
+                        if(refreshIcon) refreshIcon.classList.remove("fa-spin");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                showStatusBanner("Gagal menghubung ke Google Sheets. Sila pastikan pautan sah dan dibuka untuk awam.", "error");
+                if(refreshIcon) refreshIcon.classList.remove("fa-spin");
+            }
+
+            // Reset countdown timer
+            countdownSeconds = 60;
+        }
+
+        function processParsedData(data, fields) {
+            rawData = data;
+            headers = fields || Object.keys(data[0] || {});
+
+            // Analyze columns to detect numbers and categories
+            numericColumns = [];
+            categoricalColumns = [];
+
+            headers.forEach(header => {
+                let numericCount = 0;
+                let nonEmtpyCount = 0;
+                let uniqueValues = new Set();
+
+                rawData.forEach(row => {
+                    const val = row[header];
+                    if (val !== null && val !== undefined && String(val).trim() !== "") {
+                        nonEmtpyCount++;
+                        uniqueValues.add(String(val).trim());
+                        
+                        // Check if value is numeric (clean commas or currency symbols)
+                        const cleanNum = String(val).replace(/RM|[$%,]/g, '').trim();
+                        if (!isNaN(cleanNum) && cleanNum !== "") {
+                            numericCount++;
+                        }
+                    }
+                });
+
+                // If > 50% non-empty values are numeric, consider column numeric
+                if (nonEmtpyCount > 0 && (numericCount / nonEmtpyCount) >= 0.5) {
+                    numericColumns.push(header);
+                }
+
+                // If column has limited distinct values (<= 40), treat as category
+                if (uniqueValues.size > 0 && uniqueValues.size <= 40) {
+                    categoricalColumns.push({
+                        column: header,
+                        uniqueValues: Array.from(uniqueValues).sort()
+                    });
+                }
+            });
+
+            // Set default metric column
+            if (numericColumns.length > 0) {
+                selectedMetricColumn = numericColumns[0];
+            } else {
+                selectedMetricColumn = "";
+            }
+
+            // Set primary category column for quick filters & chart grouping
+            if (categoricalColumns.length > 0) {
+                primaryCategoryColumn = categoricalColumns[0].column;
+            } else {
+                primaryCategoryColumn = headers[0] || "";
+            }
+
+            // Update UI selectors & buttons
+            setupMetricColumnDropdown();
+            setupDropdownFilters();
+            setupQuickFilterButtons();
+
+            // Apply filters and refresh UI
+            applyFilters();
+        }
+
+        // Setup Metric Selector Dropdown
+        function setupMetricColumnDropdown() {
+            const select = document.getElementById("metricColumnSelect");
+            select.innerHTML = "";
+
+            if (numericColumns.length === 0) {
+                select.innerHTML = `<option value="">Tiada Lajur Nombor Dikesan</option>`;
+                return;
+            }
+
+            numericColumns.forEach(col => {
+                const opt = document.createElement("option");
+                opt.value = col;
+                opt.innerText = col;
+                if (col === selectedMetricColumn) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function onMetricColumnChange() {
+            const select = document.getElementById("metricColumnSelect");
+            selectedMetricColumn = select.value;
+            calculateKPIs();
+            renderCharts();
+        }
+
+        function setupQuickFilterButtons() {
+            const container = document.getElementById("quickFilterContainer");
+            container.innerHTML = "";
+
+            // "ALL" Button
+            const allBtn = document.createElement("button");
+            allBtn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-md ${
+                activeQuickFilter === 'ALL'
+                ? 'bg-gradient-to-r from-gold-600 to-gold-500 text-navy-950 shadow-gold-500/20'
+                : 'bg-navy-950 text-slate-300 hover:text-gold-400 border border-slate-800'
+            }`;
+            allBtn.innerHTML = `<i class="fa-solid fa-border-all mr-1"></i> Semua Data`;
+            allBtn.onclick = () => {
+                activeQuickFilter = "ALL";
+                setupQuickFilterButtons();
+                applyFilters();
+            };
+            container.appendChild(allBtn);
+
+            if (!primaryCategoryColumn) return;
+
+            // Get unique category values for primary category
+            const categoryObj = categoricalColumns.find(c => c.column === primaryCategoryColumn);
+            if (!categoryObj) return;
+
+            categoryObj.uniqueValues.slice(0, 8).forEach(val => {
+                const btn = document.createElement("button");
+                const isActive = activeQuickFilter === val;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-md ${
+                    isActive
+                    ? 'bg-gradient-to-r from-gold-600 to-gold-500 text-navy-950 shadow-gold-500/20'
+                    : 'bg-navy-950 text-slate-300 hover:text-gold-400 border border-slate-800'
+                }`;
+                btn.innerText = val;
+                btn.onclick = () => {
+                    activeQuickFilter = val;
+                    setupQuickFilterButtons();
+                    applyFilters();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function setupDropdownFilters() {
+            const drop1Wrapper = document.getElementById("dropdownWrapper1");
+            const drop2Wrapper = document.getElementById("dropdownWrapper2");
+
+            drop1Wrapper.classList.add("hidden");
+            drop2Wrapper.classList.add("hidden");
+
+            if (categoricalColumns.length > 0) {
+                const cat1 = categoricalColumns[0];
+                document.getElementById("dropdownLabel1").innerText = cat1.column;
+                const select1 = document.getElementById("dropdownFilter1");
+                select1.innerHTML = `<option value="">Semua (${cat1.column})</option>`;
+                cat1.uniqueValues.forEach(v => {
+                    select1.innerHTML += `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`;
+                });
+                drop1Wrapper.classList.remove("hidden");
+            }
+
+            if (categoricalColumns.length > 1) {
+                const cat2 = categoricalColumns[1];
+                document.getElementById("dropdownLabel2").innerText = cat2.column;
+                const select2 = document.getElementById("dropdownFilter2");
+                select2.innerHTML = `<option value="">Semua (${cat2.column})</option>`;
+                cat2.uniqueValues.forEach(v => {
+                    select2.innerHTML += `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`;
+                });
+                drop2Wrapper.classList.remove("hidden");
+            }
+        }
+
+        function applyFilters() {
+            searchQuery = document.getElementById("searchInput").value.toLowerCase().trim();
+            dropdownFilter1Val = document.getElementById("dropdownFilter1")?.value || "";
+            dropdownFilter2Val = document.getElementById("dropdownFilter2")?.value || "";
+
+            filteredData = rawData.filter(row => {
+                // Quick Filter Check
+                if (activeQuickFilter !== "ALL" && primaryCategoryColumn) {
+                    if (String(row[primaryCategoryColumn]).trim() !== activeQuickFilter) {
+                        return false;
+                    }
+                }
+
+                // Dropdown 1 Check
+                if (dropdownFilter1Val && categoricalColumns.length > 0) {
+                    const col1 = categoricalColumns[0].column;
+                    if (String(row[col1]).trim() !== dropdownFilter1Val) {
+                        return false;
+                    }
+                }
+
+                // Dropdown 2 Check
+                if (dropdownFilter2Val && categoricalColumns.length > 1) {
+                    const col2 = categoricalColumns[1].column;
+                    if (String(row[col2]).trim() !== dropdownFilter2Val) {
+                        return false;
+                    }
+                }
+
+                // Search Query Check
+                if (searchQuery) {
+                    const rowMatch = headers.some(h => {
+                        return String(row[h] || "").toLowerCase().includes(searchQuery);
+                    });
+                    if (!rowMatch) return false;
+                }
+
+                return true;
+            });
+
+            // Update record count badge
+            document.getElementById("recordBadge").innerText = `${filteredData.length} daripada ${rawData.length} Rekod`;
+
+            // Update print summary text
+            let filterTexts = [];
+            if (activeQuickFilter !== "ALL") filterTexts.push(`${primaryCategoryColumn}: ${activeQuickFilter}`);
+            if (dropdownFilter1Val) filterTexts.push(`${categoricalColumns[0].column}: ${dropdownFilter1Val}`);
+            if (dropdownFilter2Val) filterTexts.push(`${categoricalColumns[1].column}: ${dropdownFilter2Val}`);
+            if (searchQuery) filterTexts.push(`Carian: "${searchQuery}"`);
+
+            document.getElementById("printFilterSummary").innerText = filterTexts.length > 0 
+                ? "Tapisan Aktif: " + filterTexts.join(" | ") 
+                : "Tapisan Aktif: Semua Data Keseluruhan";
+
+            currentPage = 1;
+            calculateKPIs();
+            renderCharts();
+            renderTable();
+        }
+
+        function resetAllFilters() {
+            activeQuickFilter = "ALL";
+            document.getElementById("searchInput").value = "";
+            if (document.getElementById("dropdownFilter1")) document.getElementById("dropdownFilter1").value = "";
+            if (document.getElementById("dropdownFilter2")) document.getElementById("dropdownFilter2").value = "";
+            setupQuickFilterButtons();
+            applyFilters();
+        }
+
+        // Helper to parse numbers without altering values
+        function parseNumericValue(val) {
+            if (val === null || val === undefined) return 0;
+            const cleaned = String(val).replace(/RM|[$%,]/g, '').trim();
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function calculateKPIs() {
+            const totalRecords = filteredData.length;
+            document.getElementById("kpiRecordCount").innerText = totalRecords.toLocaleString('ms-MY');
+
+            if (!selectedMetricColumn || totalRecords === 0) {
+                document.getElementById("kpiTotalSum").innerText = "0.00";
+                document.getElementById("kpiAverage").innerText = "0.00";
+                document.getElementById("kpiMaxVal").innerText = "0.00";
+                document.getElementById("kpiMinVal").innerText = "Nilai Min: 0.00";
+                return;
+            }
+
+            let sum = 0;
+            let min = Infinity;
+            let max = -Infinity;
+            let validCount = 0;
+
+            filteredData.forEach(row => {
+                const val = parseNumericValue(row[selectedMetricColumn]);
+                sum += val;
+                if (val < min) min = val;
+                if (val > max) max = val;
+                validCount++;
+            });
+
+            if (min === Infinity) min = 0;
+            if (max === -Infinity) max = 0;
+
+            const avg = validCount > 0 ? sum / validCount : 0;
+
+            // Format numbers nicely for KPI cards while maintaining exact math
+            document.getElementById("kpiTotalSum").innerText = sum.toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById("kpiAverage").innerText = avg.toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById("kpiMaxVal").innerText = max.toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById("kpiMinVal").innerText = `Nilai Min: ${min.toLocaleString('ms-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Update subtext labels
+            document.getElementById("kpiTotalSumSub").innerText = `Lajur: ${selectedMetricColumn}`;
+            document.getElementById("kpiAverageSub").innerText = `Purata bagi ${validCount} rekod`;
+        }
+
+        function renderCharts() {
+            const ctx1 = document.getElementById("primaryBarChart")?.getContext("2d");
+            const ctx2 = document.getElementById("secondaryDoughnutChart")?.getContext("2d");
+
+            if (!ctx1 || !ctx2) return;
+
+            // Destroy previous charts
+            if (barChartInstance) barChartInstance.destroy();
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+            // Group data by primary category
+            const categoryMap = {};
+            
+            filteredData.forEach(row => {
+                const catKey = primaryCategoryColumn ? (String(row[primaryCategoryColumn] || "Lain-lain").trim()) : "Umum";
+                const val = selectedMetricColumn ? parseNumericValue(row[selectedMetricColumn]) : 1;
+                
+                if (!categoryMap[catKey]) {
+                    categoryMap[catKey] = { sum: 0, count: 0 };
+                }
+                categoryMap[catKey].sum += val;
+                categoryMap[catKey].count += 1;
+            });
+
+            const labels = Object.keys(categoryMap).slice(0, 10);
+            const sums = labels.map(l => categoryMap[l].sum);
+            const counts = labels.map(l => categoryMap[l].count);
+
+            document.getElementById("chart1Title").innerText = selectedMetricColumn 
+                ? `Jumlah (${selectedMetricColumn}) mengikut ${primaryCategoryColumn || 'Kategori'}`
+                : `Bilangan Rekod mengikut ${primaryCategoryColumn || 'Kategori'}`;
+
+            document.getElementById("chart2Title").innerText = `Agihan mengikut ${primaryCategoryColumn || 'Kategori'}`;
+
+            // Palette colors (Gold & Dark Navy Accents)
+            const goldPalette = [
+                '#D4AF37', '#F59E0B', '#EAB308', '#B38728', '#F3A812', 
+                '#2A3459', '#3A4776', '#1E293B', '#CA8A04', '#A16207'
+            ];
+
+            // Render Bar Chart
+            barChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: selectedMetricColumn || 'Bilangan',
+                        data: sums,
+                        backgroundColor: 'rgba(212, 175, 55, 0.75)',
+                        borderColor: '#D4AF37',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        hoverBackgroundColor: '#FACC15'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.raw.toLocaleString('ms-MY')}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94A3B8', font: { size: 10 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#94A3B8', font: { size: 10 } },
+                            grid: { color: 'rgba(255, 255, 255, 0.08)' }
+                        }
+                    }
+                }
+            });
+
+            // Render Doughnut Chart
+            doughnutChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: selectedMetricColumn ? sums : counts,
+                        backgroundColor: goldPalette.slice(0, labels.length),
+                        borderColor: '#0B132B',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#CBD5E1',
+                                font: { size: 11 },
+                                boxWidth: 12
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        function renderTable() {
+            const headerRow = document.getElementById("tableHeaderRow");
+            const tableBody = document.getElementById("tableBody");
+
+            headerRow.innerHTML = "";
+            tableBody.innerHTML = "";
+
+            if (headers.length === 0) {
+                tableBody.innerHTML = `<tr><td class="px-4 py-8 text-center text-slate-500">Tiada data untuk dipaparkan.</td></tr>`;
+                return;
+            }
+
+            // Render Table Headers
+            headers.forEach(h => {
+                const th = document.createElement("th");
+                th.className = "px-4 py-3 cursor-pointer hover:text-white transition-colors whitespace-nowrap";
+                th.innerHTML = `${escapeHtml(h)} <i class="fa-solid fa-sort text-[10px] ml-1 opacity-50"></i>`;
+                th.onclick = () => sortTableByColumn(h);
+                headerRow.appendChild(th);
+            });
+
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="${headers.length}" class="px-4 py-8 text-center text-slate-500 italic">Tiada rekod data yang sepadan dengan tapisan anda.</td></tr>`;
+                document.getElementById("tableInfoText").innerText = "Menunjukkan 0 rekod";
+                document.getElementById("paginationControls").innerHTML = "";
+                return;
+            }
+
+            // Pagination calculation
+            const totalRecords = filteredData.length;
+            const effectivePageSize = pageSize === "all" ? totalRecords : parseInt(pageSize);
+            const totalPages = Math.ceil(totalRecords / effectivePageSize);
+            
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIndex = (currentPage - 1) * effectivePageSize;
+            const endIndex = Math.min(startIndex + effectivePageSize, totalRecords);
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            // Render Table Rows
+            pageData.forEach((row, idx) => {
+                const tr = document.createElement("tr");
+                tr.className = idx % 2 === 0 ? "bg-navy-900/40 hover:bg-navy-800/60" : "bg-navy-950/40 hover:bg-navy-800/60";
+
+                headers.forEach(h => {
+                    const td = document.createElement("td");
+                    td.className = "px-4 py-3 border-t border-navy-800/40 whitespace-nowrap";
+                    const val = row[h] !== undefined && row[h] !== null ? row[h] : "";
+                    
+                    // Highlight numeric columns in gold font
+                    if (numericColumns.includes(h) && val !== "") {
+                        td.className += " font-medium text-gold-400";
+                    }
+
+                    td.innerText = val;
+                    tr.appendChild(td);
+                });
+
+                tableBody.appendChild(tr);
+            });
+
+            // Update Pagination Info Text
+            document.getElementById("tableInfoText").innerText = `Menunjukkan ${startIndex + 1} hingga ${endIndex} daripada ${totalRecords} rekod`;
+
+            // Render Pagination Buttons
+            renderPaginationButtons(totalPages);
+        }
+
+        function renderPaginationButtons(totalPages) {
+            const container = document.getElementById("paginationControls");
+            container.innerHTML = "";
+
+            if (totalPages <= 1) return;
+
+            // Prev Button
+            const prevBtn = document.createElement("button");
+            prevBtn.className = `px-2.5 py-1 rounded text-xs border ${currentPage === 1 ? 'border-slate-800 text-slate-600' : 'border-slate-700 text-slate-300 hover:border-gold-500'}`;
+            prevBtn.innerHTML = `<i class="fa-solid fa-chevron-left"></i>`;
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { currentPage--; renderTable(); };
+            container.appendChild(prevBtn);
+
+            // Page numbers
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                const pageBtn = document.createElement("button");
+                pageBtn.className = `px-2.5 py-1 rounded text-xs font-semibold ${currentPage === i ? 'bg-gold-500 text-navy-950' : 'bg-navy-900 border border-slate-800 text-slate-300 hover:border-gold-500'}`;
+                pageBtn.innerText = i;
+                pageBtn.onclick = () => { currentPage = i; renderTable(); };
+                container.appendChild(pageBtn);
+            }
+
+            // Next Button
+            const nextBtn = document.createElement("button");
+            nextBtn.className = `px-2.5 py-1 rounded text-xs border ${currentPage === totalPages ? 'border-slate-800 text-slate-600' : 'border-slate-700 text-slate-300 hover:border-gold-500'}`;
+            nextBtn.innerHTML = `<i class="fa-solid fa-chevron-right"></i>`;
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => { currentPage++; renderTable(); };
+            container.appendChild(nextBtn);
+        }
+
+        function changePageSize() {
+            pageSize = document.getElementById("pageSizeSelect").value;
+            currentPage = 1;
+            renderTable();
+        }
+
+        let sortAsc = true;
+        let lastSortedCol = "";
+
+        function sortTableByColumn(col) {
+            if (lastSortedCol === col) {
+                sortAsc = !sortAsc;
+            } else {
+                sortAsc = true;
+                lastSortedCol = col;
+            }
+
+            const isNumeric = numericColumns.includes(col);
+
+            filteredData.sort((a, b) => {
+                let valA = a[col] || "";
+                let valB = b[col] || "";
+
+                if (isNumeric) {
+                    valA = parseNumericValue(valA);
+                    valB = parseNumericValue(valB);
+                    return sortAsc ? valA - valB : valB - valA;
+                } else {
+                    return sortAsc 
+                        ? String(valA).localeCompare(String(valB)) 
+                        : String(valB).localeCompare(String(valA));
+                }
+            });
+
+            renderTable();
+        }
+
+        function startAutoSyncTimer() {
+            if (autoSyncTimer) clearInterval(autoSyncTimer);
+
+            autoSyncTimer = setInterval(() => {
+                countdownSeconds--;
+                const countdownEl = document.getElementById("syncCountdown");
+                if (countdownEl) countdownEl.innerText = `${countdownSeconds}s`;
+
+                if (countdownSeconds <= 0) {
+                    fetchLiveData();
+                }
+            }, 1000);
+        }
+
+        function showStatusBanner(msg, type) {
+            const banner = document.getElementById("statusBanner");
+            const inner = document.getElementById("statusBannerInner");
+            const icon = document.getElementById("statusBannerIcon");
+            const text = document.getElementById("statusBannerText");
+
+            text.innerText = msg;
+            banner.classList.remove("hidden");
+
+            if (type === "success") {
+                inner.className = "p-3 rounded-xl flex items-center justify-between bg-emerald-950/80 border border-emerald-500/40 text-emerald-200";
+                icon.className = "fa-solid fa-circle-check text-emerald-400";
+            } else if (type === "error") {
+                inner.className = "p-3 rounded-xl flex items-center justify-between bg-rose-950/80 border border-rose-500/40 text-rose-200";
+                icon.className = "fa-solid fa-triangle-exclamation text-rose-400";
+            } else if (type === "warning") {
+                inner.className = "p-3 rounded-xl flex items-center justify-between bg-amber-950/80 border border-amber-500/40 text-amber-200";
+                icon.className = "fa-solid fa-triangle-exclamation text-amber-400";
+            } else {
+                inner.className = "p-3 rounded-xl flex items-center justify-between bg-navy-800 border border-gold-600/30 text-gold-300";
+                icon.className = "fa-solid fa-circle-info text-gold-400";
+            }
+
+            // Auto hide success banner after 5 seconds
+            if (type === "success") {
+                setTimeout(() => {
+                    hideStatusBanner();
+                }, 5000);
+            }
+        }
+
+        function hideStatusBanner() {
+            document.getElementById("statusBanner").classList.add("hidden");
+        }
+
+        // Modal Controls
+        function toggleSettingsModal() {
+            const modal = document.getElementById("settingsModal");
+            modal.classList.toggle("hidden");
+        }
+
+        function saveCustomCsvUrl() {
+            const inputVal = document.getElementById("csvUrlInput").value.trim();
+            if (inputVal) {
+                currentCsvUrl = inputVal;
+                localStorage.setItem("custom_csv_url", currentCsvUrl);
+                toggleSettingsModal();
+                fetchLiveData();
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&raw_gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
